@@ -1,14 +1,22 @@
 [package]
 name = "vtt-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 authors = ["Geoff Seemueller"]
-description = "Command-line utility that streams microphone input to OpenAI compatible transcription APIs"
+description = "Library and CLI for streaming microphone input to OpenAI compatible transcription APIs"
 repository = "https://github.com/geoffsee/vtt-rs"
 readme = "README.md"
 keywords = ["transcription", "openai", "whisper", "audio", "cli"]
-categories = ["command-line-utilities", "multimedia::audio"]
+categories = ["command-line-utilities", "multimedia::audio", "api-bindings"]
+
+[lib]
+name = "vtt_rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vtt-rs"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
