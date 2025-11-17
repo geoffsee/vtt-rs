@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["Geoff Seemueller"]
+description = "Command-line utility that streams microphone input to OpenAI compatible transcription APIs"
+repository = "https://github.com/geoffsee/vtt-rs"
+readme = "README.md"
+keywords = ["transcription", "openai", "whisper", "audio", "cli"]
+categories = ["command-line-utilities", "multimedia::audio"]
 
 [dependencies]
 anyhow = "1.0"
