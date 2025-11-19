@@ -77,6 +77,12 @@ pub struct Config {
     /// to this file in addition to being sent via events. Use [`None`] to disable
     /// file logging.
     pub out_file: Option<PathBuf>,
+
+    /// Optional on-device configuration.
+    ///
+    /// When present and `enabled`, the service will run Whisper locally using
+    /// the bundled Candle integration instead of calling a remote API.
+    pub on_device: Option<OnDeviceConfig>,
 }
 
 impl Default for Config {
@@ -86,6 +92,7 @@ impl Default for Config {
             model: DEFAULT_MODEL.to_string(),
             endpoint: DEFAULT_ENDPOINT.to_string(),
             out_file: None,
+            on_device: None,
         }
     }
 }
@@ -192,5 +199,67 @@ impl Config {
                 path.clone()
             }
         })
+    }
+
+    /// Returns true when on-device transcription is enabled.
+    pub fn uses_on_device(&self) -> bool {
+        self.on_device
+            .as_ref()
+            .map(|cfg| cfg.enabled)
+            .unwrap_or(false)
+    }
+
+    /// Returns the enabled on-device configuration if present.
+    pub fn on_device_config(&self) -> Option<&OnDeviceConfig> {
+        self.on_device.as_ref().filter(|cfg| cfg.enabled)
+    }
+}
+
+/// Configuration for the on-device Whisper backend.
+#[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
+pub struct OnDeviceConfig {
+    /// Whether to enable the on-device backend.
+    pub enabled: bool,
+    /// Force CPU execution instead of GPU.
+    pub cpu: bool,
+    /// Predefined Whisper model identifier (e.g. `"tiny.en"`).
+    pub model: String,
+    /// Optional custom Hugging Face model id.
+    pub model_id: Option<String>,
+    /// Optional revision for the custom model id.
+    pub revision: Option<String>,
+    /// Use quantized weights where available (tiny/tiny.en).
+    pub quantized: bool,
+    /// RNG seed passed to the decoder.
+    pub seed: u64,
+    /// Optional forced language token (e.g. `"en"`).
+    pub language: Option<String>,
+    /// Optional decoding task (`"transcribe"` or `"translate"`).
+    pub task: Option<String>,
+    /// Emit timestamped segments.
+    pub timestamps: bool,
+    /// Print verbose logs from the decoder.
+    pub verbose: bool,
+    /// Preferred audio input device name.
+    pub audio_device: Option<String>,
+}
+
+impl Default for OnDeviceConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            cpu: true,
+            model: "tiny.en".to_string(),
+            model_id: None,
+            revision: None,
+            quantized: false,
+            seed: 299_792_458,
+            language: None,
+            task: None,
+            timestamps: false,
+            verbose: false,
+            audio_device: None,
+        }
     }
 }

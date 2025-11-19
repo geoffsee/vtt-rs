@@ -1,6 +1,6 @@
 [package]
 name = "vtt-rs"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "MIT"
 authors = ["Geoff Seemueller"]
@@ -20,12 +20,20 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0"
+byteorder = "1.5"
+candle = { version = "0.9.1", package = "candle-core" }
+candle_nn = { version = "0.9.1", package = "candle-nn" }
+candle_transformers = { version = "0.9.1", package = "candle-transformers" }
 cpal = "0.16"
+hf-hub = "0.4"
 hound = "3.4"
+rand = "0.9"
 reqwest = { version = "0.11", features = ["json", "multipart", "rustls-tls"] }
+rubato = "0.15"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "fs"] }
+tokenizers = { version = "0.21", default-features = false, features = ["fancy-regex"] }
 
 [dev-dependencies]
 tempfile = "3"

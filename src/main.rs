@@ -10,9 +10,6 @@ use vtt_rs::{Config, TranscriptionEvent, TranscriptionService};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let api_key = std::env::var("OPENAI_API_KEY")
-        .context("Set OPENAI_API_KEY to call OpenAI transcription")?;
-
     let config_arg = std::env::args().nth(1);
     let (config, config_path) = load_config(config_arg)?;
 
@@ -23,14 +20,30 @@ async fn main() -> Result<()> {
     }
 
     let resolved_out_path = config.resolve_out_path(config_path.as_deref());
+    let on_device = config.uses_on_device();
     if let Some(path) = resolved_out_path.as_ref() {
         println!("Saving transcripts to {}", path.display());
+    }
+
+    if on_device {
+        let model_name = config
+            .on_device
+            .as_ref()
+            .map(|c| c.model.clone())
+            .unwrap_or_else(|| "tiny.en".to_string());
+        println!("Using on-device Whisper backend ({model_name}).");
     }
 
     println!("Starting transcription service...");
     println!("Press Ctrl+C to stop.");
 
-    let mut service = TranscriptionService::new(config, api_key)?;
+    let mut service = if on_device {
+        TranscriptionService::new_on_device(config)?
+    } else {
+        let api_key = std::env::var("OPENAI_API_KEY")
+            .context("Set OPENAI_API_KEY to call OpenAI transcription")?;
+        TranscriptionService::new(config, api_key)?
+    };
     let (mut receiver, _stream) = service.start().await?;
 
     let ctrl_c = signal::ctrl_c();

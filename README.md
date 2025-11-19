@@ -26,7 +26,12 @@ cargo doc --no-deps --open
     "chunk_duration_secs": 5,
     "model": "whisper-1",
     "endpoint": "https://api.openai.com/v1/audio/transcriptions",
-    "out_file": "transcripts.log"
+    "out_file": "transcripts.log",
+    "on_device": {
+      "enabled": false,
+      "model": "tiny.en",
+      "cpu": true
+    }
   }
   ```
 
@@ -34,6 +39,14 @@ cargo doc --no-deps --open
   * `model`: which OpenAI transcription model to hit.
   * `endpoint`: custom transcription endpoint for e.g. a proxy service.
   * `out_file`: path to append every transcription (chunk ID + contents).
+  * `on_device`: optional block to turn on the bundled Candle Whisper runner.
+
+### On-Device Whisper
+
+Set `on_device.enabled` to `true` in your config to run Whisper locally without
+calling the OpenAI API. You can pick from the built-in model shortcuts
+(`"tiny"`, `"small"`, etc.), force CPU execution, and optionally select a
+specific input device.
 
 ## Usage as a Library
 

@@ -73,7 +73,7 @@ mod audio;
 mod config;
 mod transcription;
 
-pub use config::Config;
+pub use config::{Config, OnDeviceConfig};
 pub use transcription::{TranscriptionEvent, TranscriptionService};
 
 // Re-export commonly used types

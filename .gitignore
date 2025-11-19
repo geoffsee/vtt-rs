@@ -2,3 +2,5 @@
 /.idea/
 *.iml
 /INTEGRATION*
+/src/whisper/melfilters.bytes
+/src/whisper/melfilters128.bytes

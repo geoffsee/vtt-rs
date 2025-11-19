@@ -13,7 +13,10 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
+
+#[path = "whisper-microphone/mod.rs"]
+mod on_device;
 
 /// Events emitted by the transcription service.
 ///
@@ -119,7 +122,7 @@ pub enum TranscriptionEvent {
 /// ```
 pub struct TranscriptionService {
     config: Config,
-    api_key: String,
+    api_key: Option<String>,
 }
 
 impl TranscriptionService {
@@ -145,7 +148,18 @@ impl TranscriptionService {
     ///
     /// Currently always succeeds, but returns [`Result`] for future extensibility.
     pub fn new(config: Config, api_key: String) -> Result<Self> {
-        Ok(Self { config, api_key })
+        Ok(Self {
+            config,
+            api_key: Some(api_key),
+        })
+    }
+
+    /// Creates a transcription service configured for on-device inference.
+    pub fn new_on_device(config: Config) -> Result<Self> {
+        Ok(Self {
+            config,
+            api_key: None,
+        })
     }
 
     /// Starts the transcription service and returns a receiver for events.
@@ -197,12 +211,6 @@ impl TranscriptionService {
     /// May panic if the audio system is not properly initialized (rare).
     pub async fn start(&mut self) -> Result<(UnboundedReceiver<TranscriptionEvent>, Stream)> {
         let (event_tx, event_rx) = unbounded_channel::<TranscriptionEvent>();
-        let (sample_tx, mut sample_rx) = unbounded_channel::<Vec<f32>>();
-
-        // Start audio capture
-        let (_stream, audio_config) = start_audio_capture(sample_tx)?;
-
-        // Open output file if configured
         let transcript_sink = if let Some(path) = &self.config.out_file {
             let file = OpenOptions::new()
                 .create(true)
@@ -215,6 +223,22 @@ impl TranscriptionService {
             None
         };
 
+        if let Some(on_device_cfg) = self.config.on_device_config().cloned() {
+            let handle = tokio::runtime::Handle::current();
+            let stream = on_device::start_on_device_transcription(
+                on_device_cfg,
+                event_tx.clone(),
+                transcript_sink.clone(),
+                handle,
+            )?;
+            return Ok((event_rx, stream));
+        }
+
+        let (sample_tx, mut sample_rx) = unbounded_channel::<Vec<f32>>();
+
+        // Start audio capture for remote transcription
+        let (_stream, audio_config) = start_audio_capture(sample_tx)?;
+
         let client = Client::new();
         let chunk_duration_secs = self.config.chunk_duration_secs.max(1);
         let samples_per_chunk = (audio_config.sample_rate as usize)
@@ -223,7 +247,10 @@ impl TranscriptionService {
 
         let model = Arc::new(self.config.model.clone());
         let endpoint = Arc::new(self.config.endpoint.clone());
-        let api_key = self.api_key.clone();
+        let api_key = self
+            .api_key
+            .clone()
+            .context("API key required for remote transcription")?;
 
         // Spawn the processing task
         tokio::spawn(async move {
@@ -267,8 +294,11 @@ impl TranscriptionService {
 
                                 // Write to file if configured
                                 if let Some(writer) = chunk_sink {
-                                    let record_text =
-                                        if text.is_empty() { "<silence>" } else { text.as_str() };
+                                    let record_text = if text.is_empty() {
+                                        "<silence>"
+                                    } else {
+                                        text.as_str()
+                                    };
                                     if let Err(err) =
                                         append_transcript(writer, current_chunk, record_text).await
                                     {
@@ -334,7 +364,7 @@ async fn transcribe_chunk(
     Ok(text)
 }
 
-async fn append_transcript(
+pub(super) async fn append_transcript(
     writer: Arc<tokio::sync::Mutex<tokio::fs::File>>,
     chunk_id: usize,
     text: &str,

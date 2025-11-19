@@ -63,10 +63,7 @@ impl AIAgent {
             // Here you could analyze the request and provide help
         } else if text_lower.contains("status") {
             let context = self.context.read().await;
-            println!(
-                "[Agent] Current context has {} items",
-                context.len()
-            );
+            println!("[Agent] Current context has {} items", context.len());
         }
 
         // Example: Sentiment analysis
@@ -100,8 +97,7 @@ async fn main() -> Result<()> {
     println!("=== AI Agent with Situational Awareness ===\n");
 
     // Get API key
-    let api_key = std::env::var("OPENAI_API_KEY")
-        .expect("Set OPENAI_API_KEY environment variable");
+    let api_key = std::env::var("OPENAI_API_KEY").expect("Set OPENAI_API_KEY environment variable");
 
     // Configure transcription
     let config = Config {

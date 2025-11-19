@@ -2,5 +2,12 @@
   "chunk_duration_secs": 5,
   "model": "whisper-1",
   "endpoint": "https://api.openai.com/v1/audio/transcriptions",
-  "out_file": "transcripts.log"
+  "out_file": "transcripts.log",
+  "on_device": {
+    "enabled": true,
+    "model": "large-v3-turbo",
+    "cpu": false,
+    "quantized": false,
+    "verbose": true
+  }
 }

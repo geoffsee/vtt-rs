@@ -3,7 +3,7 @@
 //! This module provides low-level audio capture from system input devices
 //! and encoding to WAV format for API transmission.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, Stream, StreamConfig};
 use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};

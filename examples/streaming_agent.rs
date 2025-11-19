@@ -122,8 +122,7 @@ async fn main() -> Result<()> {
     println!("=== Streaming AI Agent ===\n");
 
     // Get API key
-    let api_key = std::env::var("OPENAI_API_KEY")
-        .expect("Set OPENAI_API_KEY environment variable");
+    let api_key = std::env::var("OPENAI_API_KEY").expect("Set OPENAI_API_KEY environment variable");
 
     // Configure with shorter chunks for real-time feel
     let config = Config {
