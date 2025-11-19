@@ -18,7 +18,7 @@ cargo doc --no-deps --open
 
 ## Configuration
 
-- Set `OPENAI_API_KEY` in your environment before running anything.
+- If your endpoint requires authentication, set `OPENAI_API_KEY` in your environment. For local OpenAI-compatible servers that don't require auth, this can be omitted.
 - The binary expects an optional JSON configuration file (default `vtt.config.json` in the current directory, or pass an alternate path as the first argument).
 - Supported keys (all optional; sensible defaults exist):
   ```json
@@ -47,6 +47,31 @@ Set `on_device.enabled` to `true` in your config to run Whisper locally without
 calling the OpenAI API. You can pick from the built-in model shortcuts
 (`"tiny"`, `"small"`, etc.), force CPU execution, and optionally select a
 specific input device.
+
+### Local MLX Parakeet (no API key)
+
+You can use a local OpenAI-compatible server that serves the MLX model `mlx-community/parakeet-tdt-0.6b-v2`. Point `endpoint` to your server and set `model` accordingly. No `OPENAI_API_KEY` is required when the server does not enforce auth.
+
+Example config snippet:
+
+```json
+{
+  "chunk_duration_secs": 3,
+  "model": "mlx-community/parakeet-tdt-0.6b-v2",
+  "endpoint": "http://localhost:8000/v1/audio/transcriptions",
+  "out_file": "transcripts.log"
+}
+```
+
+Then run the CLI without setting `OPENAI_API_KEY`:
+
+```bash
+cargo run -- vtt.config.json
+```
+
+Notes:
+- Ensure your local server implements an OpenAI-compatible audio transcription endpoint and understands the `model` identifier.
+- On-device mode in this repo currently supports Whisper via Candle. Parakeet support is provided via the remote endpoint path as shown above.
 
 ## Usage as a Library
 
@@ -103,7 +128,11 @@ OPENAI_API_KEY=sk-... cargo run --example ai_agent
 ## Usage as a CLI
 
 ```bash
+# With OpenAI or any endpoint requiring auth
 OPENAI_API_KEY=sk-... cargo run -- vtt.config.json
+
+# With a local server that does not require auth
+cargo run -- vtt.config.json
 ```
 
 - Omit the CLI argument to let the tool load `vtt.config.json` from the current directory if it exists, otherwise it runs with defaults.

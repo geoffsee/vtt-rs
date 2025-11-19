@@ -3,7 +3,7 @@
 //! This binary provides a standalone CLI tool for real-time audio transcription.
 //! See the library documentation for programmatic usage.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::PathBuf;
 use tokio::signal;
 use vtt_rs::{Config, TranscriptionEvent, TranscriptionService};
@@ -40,9 +40,20 @@ async fn main() -> Result<()> {
     let mut service = if on_device {
         TranscriptionService::new_on_device(config)?
     } else {
-        let api_key = std::env::var("OPENAI_API_KEY")
-            .context("Set OPENAI_API_KEY to call OpenAI transcription")?;
-        TranscriptionService::new(config, api_key)?
+        match std::env::var("OPENAI_API_KEY") {
+            Ok(api_key) => {
+                println!("Using remote transcription with API key (Authorization: Bearer ...)");
+                TranscriptionService::new(config, api_key)?
+            }
+            Err(_) => {
+                println!(
+                    "No OPENAI_API_KEY found. Proceeding without Authorization header.\n\
+                    If your endpoint requires a key, set OPENAI_API_KEY.\n\
+                    This is suitable for local OpenAI-compatible servers (e.g. MLX Parakeet)."
+                );
+                TranscriptionService::new_no_api(config)?
+            }
+        }
     };
     let (mut receiver, _stream) = service.start().await?;
 

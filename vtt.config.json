@@ -5,9 +5,9 @@
   "out_file": "transcripts.log",
   "on_device": {
     "enabled": true,
-    "model": "large-v3-turbo",
-    "cpu": false,
-    "quantized": false,
-    "verbose": true
+    "model": "tiny.en",
+    "cpu": true,
+    "quantized": true,
+    "verbose": false
   }
 }

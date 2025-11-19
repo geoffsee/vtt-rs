@@ -154,6 +154,15 @@ impl TranscriptionService {
         })
     }
 
+    /// Creates a new transcription service for remote APIs without an API key.
+    ///
+    /// This is useful when connecting to a local OpenAI-compatible server that
+    /// does not require authentication (e.g. a self-hosted MLX server running a
+    /// Parakeet model).
+    pub fn new_no_api(config: Config) -> Result<Self> {
+        Ok(Self { config, api_key: None })
+    }
+
     /// Creates a transcription service configured for on-device inference.
     pub fn new_on_device(config: Config) -> Result<Self> {
         Ok(Self {
@@ -247,10 +256,8 @@ impl TranscriptionService {
 
         let model = Arc::new(self.config.model.clone());
         let endpoint = Arc::new(self.config.endpoint.clone());
-        let api_key = self
-            .api_key
-            .clone()
-            .context("API key required for remote transcription")?;
+        // API key is optional to support local OpenAI-compatible servers.
+        let api_key = self.api_key.clone();
 
         // Spawn the processing task
         tokio::spawn(async move {
@@ -329,7 +336,7 @@ impl TranscriptionService {
 
 async fn transcribe_chunk(
     client: Client,
-    api_key: String,
+    api_key: Option<String>,
     sample_rate: u32,
     channels: u16,
     samples: Vec<f32>,
@@ -345,9 +352,11 @@ async fn transcribe_chunk(
         .text("model", model.as_ref().clone())
         .part("file", part);
 
-    let response = client
-        .post(endpoint.as_str())
-        .bearer_auth(api_key)
+    let mut req = client.post(endpoint.as_str());
+    if let Some(key) = api_key.as_ref() {
+        req = req.bearer_auth(key);
+    }
+    let response = req
         .multipart(form)
         .send()
         .await?
