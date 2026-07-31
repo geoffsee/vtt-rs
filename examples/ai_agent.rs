@@ -105,6 +105,7 @@ async fn main() -> Result<()> {
         model: "whisper-1".to_string(),
         endpoint: "https://api.openai.com/v1/audio/transcriptions".to_string(),
         out_file: None, // Agent doesn't need file logging
+        ..Default::default()
     };
 
     // Create AI agent

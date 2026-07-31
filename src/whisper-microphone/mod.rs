@@ -38,7 +38,7 @@ impl Model {
 
     pub fn encoder_forward(&mut self, x: &Tensor, flush: bool) -> candle::Result<Tensor> {
         match self {
-            Self::Normal(m) => m.encoder.forward(x.into(), flush),
+            Self::Normal(m) => m.encoder.forward(x, flush),
             Self::Quantized(m) => m.encoder.forward(x, flush),
         }
     }
@@ -766,11 +766,7 @@ fn select_audio_device(preferred: Option<&str>) -> Result<cpal::Device> {
             .context("failed to find the default audio input device"),
         Some(name) => host
             .input_devices()?
-            .find(|dev| {
-                dev.description()
-                    .map(|d| d.name() == name)
-                    .unwrap_or(false)
-            })
+            .find(|dev| dev.description().map(|d| d.name() == name).unwrap_or(false))
             .ok_or_else(|| anyhow!("failed to find audio input device '{name}'")),
     }
 }

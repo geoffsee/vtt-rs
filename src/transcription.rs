@@ -113,6 +113,7 @@ pub enum TranscriptionEvent {
 ///     model: "whisper-1".to_string(),
 ///     endpoint: "https://api.openai.com/v1/audio/transcriptions".to_string(),
 ///     out_file: None,
+///     ..Default::default()
 /// };
 ///
 /// let api_key = std::env::var("OPENAI_API_KEY")?;
@@ -160,7 +161,10 @@ impl TranscriptionService {
     /// does not require authentication (e.g. a self-hosted MLX server running a
     /// Parakeet model).
     pub fn new_no_api(config: Config) -> Result<Self> {
-        Ok(Self { config, api_key: None })
+        Ok(Self {
+            config,
+            api_key: None,
+        })
     }
 
     /// Creates a transcription service configured for on-device inference.
@@ -334,6 +338,7 @@ impl TranscriptionService {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn transcribe_chunk(
     client: Client,
     api_key: Option<String>,
@@ -356,11 +361,7 @@ async fn transcribe_chunk(
     if let Some(key) = api_key.as_ref() {
         req = req.bearer_auth(key);
     }
-    let response = req
-        .multipart(form)
-        .send()
-        .await?
-        .error_for_status()?;
+    let response = req.multipart(form).send().await?.error_for_status()?;
 
     let payload: Value = response.json().await?;
     let text = payload

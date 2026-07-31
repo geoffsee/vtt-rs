@@ -130,6 +130,7 @@ async fn main() -> Result<()> {
         model: "whisper-1".to_string(),
         endpoint: "https://api.openai.com/v1/audio/transcriptions".to_string(),
         out_file: None,
+        ..Default::default()
     };
 
     // Create streaming agent with 30-second context window

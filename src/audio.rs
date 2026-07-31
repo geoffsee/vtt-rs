@@ -66,7 +66,7 @@ pub(crate) fn start_audio_capture(
         .default_input_config()
         .context("Failed to fetch the default input configuration")?;
 
-    let stream_config: StreamConfig = input_config.clone().into();
+    let stream_config: StreamConfig = input_config.into();
     let sample_format = input_config.sample_format();
 
     let audio_config = AudioConfig {
