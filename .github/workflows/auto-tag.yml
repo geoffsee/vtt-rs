@@ -1,0 +1,122 @@
+name: Auto Tag
+
+# Cuts a release tag when dependencies change on main -- primarily so
+# Dependabot security updates ship to users instead of sitting in the repo.
+#
+# Requires a RELEASE_TOKEN secret (Contents: Read and write).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Cargo.lock"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which component to bump"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+concurrency:
+  group: auto-tag
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    name: Bump version and tag
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      !startsWith(github.event.head_commit.message, 'chore(release):')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Fail early if RELEASE_TOKEN is missing
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_TOKEN" ]; then
+            echo "::error::RELEASE_TOKEN is not set."
+            exit 1
+          fi
+
+      - name: Setup Rust
+        run: rustup update stable && rustup default stable
+
+      - name: Compute next version
+        id: version
+        run: |
+          set -euo pipefail
+
+          CURRENT=$(awk '
+            /^\[package\]/            { in_block = 1; next }
+            /^\[workspace\.package\]/ { in_block = 1; next }
+            /^\[/                     { in_block = 0 }
+            in_block && /^version = / { gsub(/"/, "", $3); print $3; exit }
+          ' Cargo.toml)
+
+          if [ -z "$CURRENT" ]; then
+            echo "::error::could not read version from Cargo.toml"
+            exit 1
+          fi
+
+          BUMP="${{ github.event.inputs.bump || 'patch' }}"
+          IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          PATCH=${PATCH%%-*}
+
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+            *) echo "::error::unknown bump type: $BUMP"; exit 1 ;;
+          esac
+
+          NEXT="$MAJOR.$MINOR.$PATCH"
+
+          if git rev-parse -q --verify "refs/tags/v$NEXT" >/dev/null; then
+            echo "::error::tag v$NEXT already exists"
+            exit 1
+          fi
+
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT"       >> "$GITHUB_OUTPUT"
+          echo "Bumping $CURRENT -> $NEXT ($BUMP)"
+
+      - name: Apply version to manifests
+        run: |
+          set -euo pipefail
+          NEXT="${{ steps.version.outputs.next }}"
+
+          awk -v v="$NEXT" '
+            /^\[/ { in_pkg = ($0 == "[package]" || $0 == "[workspace.package]") }
+            in_pkg && /^version = / { print "version = \"" v "\""; next }
+            { print }
+          ' Cargo.toml > Cargo.toml.tmp && mv Cargo.toml.tmp Cargo.toml
+
+          cargo update --workspace 2>/dev/null || cargo update 2>/dev/null || true
+
+      - name: Commit, tag, and push
+        run: |
+          set -euo pipefail
+          NEXT="${{ steps.version.outputs.next }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Cargo.toml Cargo.lock
+          git commit -m "chore(release): v$NEXT"
+
+          git tag -a "v$NEXT" -m "Release v$NEXT"
+          git push origin HEAD:main
+          git push origin "v$NEXT"
+
+          echo "Tagged v$NEXT"
+          echo "### Released \`v$NEXT\`" >> "$GITHUB_STEP_SUMMARY"
