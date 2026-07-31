@@ -1,0 +1,54 @@
+name: Supervisor
+
+on:
+  schedule:
+    - cron: "0 14 * * 1"  # Monday 14:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: read
+  actions: read
+
+concurrency:
+  group: weekly-unstick
+  cancel-in-progress: false
+
+jobs:
+  unstick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Run Cursor Agent
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          agent -p "$(cat <<'PROMPT'
+          You are the weekly unsticker for this repository.
+
+          Goal: find anything stuck that blocks Dependabot updates from landing
+          and shipping (open/failing Dependabot PRs, red CI on the default
+          branch, failed Auto Tag / Release runs, merge conflicts, missing
+          required checks), then fix it with the smallest safe change.
+
+          Rules:
+          - Prefer fixing CI, rebasing/updating Dependabot PRs, and unblocking
+            auto-tag/release over large refactors.
+          - Do not weaken branch protection or disable required checks.
+          - Open or update a PR if direct push is blocked; otherwise push to
+            the default branch only when safe and hooks/CI would pass.
+          - Summarize what was stuck and what you did at the end.
+          PROMPT
+          )" --model auto --force --trust --sandbox disabled
