@@ -51,4 +51,4 @@ jobs:
             the default branch only when safe and hooks/CI would pass.
           - Summarize what was stuck and what you did at the end.
           PROMPT
-          )" --model auto
+          )" --model auto --force --trust --sandbox disabled
