@@ -70,7 +70,7 @@ pub(crate) fn start_audio_capture(
     let sample_format = input_config.sample_format();
 
     let audio_config = AudioConfig {
-        sample_rate: stream_config.sample_rate.0,
+        sample_rate: stream_config.sample_rate,
         channels: stream_config.channels,
     };
 
@@ -79,7 +79,7 @@ pub(crate) fn start_audio_capture(
             let sender = sender.clone();
             let err_fn = move |err| eprintln!("Input stream error: {err}");
             device.build_input_stream(
-                &stream_config,
+                stream_config,
                 move |data: &[f32], _| send_samples_f32(data, &sender),
                 err_fn,
                 None,
@@ -89,7 +89,7 @@ pub(crate) fn start_audio_capture(
             let sender = sender.clone();
             let err_fn = move |err| eprintln!("Input stream error: {err}");
             device.build_input_stream(
-                &stream_config,
+                stream_config,
                 move |data: &[i16], _| send_samples_i16(data, &sender),
                 err_fn,
                 None,
@@ -99,7 +99,7 @@ pub(crate) fn start_audio_capture(
             let sender = sender.clone();
             let err_fn = move |err| eprintln!("Input stream error: {err}");
             device.build_input_stream(
-                &stream_config,
+                stream_config,
                 move |data: &[u16], _| send_samples_u16(data, &sender),
                 err_fn,
                 None,

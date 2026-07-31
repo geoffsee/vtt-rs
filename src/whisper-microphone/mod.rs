@@ -487,10 +487,10 @@ pub(super) fn start_on_device_transcription(
         .default_input_config()
         .context("Failed to get default audio input config")?;
     let channel_count = audio_config.channels() as usize;
-    let in_sample_rate = audio_config.sample_rate().0 as usize;
+    let in_sample_rate = audio_config.sample_rate() as usize;
     let (tx, rx) = mpsc::channel::<Vec<f32>>();
     let stream = audio_device.build_input_stream(
-        &audio_config.config(),
+        audio_config.config(),
         move |pcm: &[f32], _: &cpal::InputCallbackInfo| {
             let chunk = pcm
                 .iter()
@@ -766,7 +766,11 @@ fn select_audio_device(preferred: Option<&str>) -> Result<cpal::Device> {
             .context("failed to find the default audio input device"),
         Some(name) => host
             .input_devices()?
-            .find(|dev| dev.name().map_or(false, |n| n == name))
+            .find(|dev| {
+                dev.description()
+                    .map(|d| d.name() == name)
+                    .unwrap_or(false)
+            })
             .ok_or_else(|| anyhow!("failed to find audio input device '{name}'")),
     }
 }
