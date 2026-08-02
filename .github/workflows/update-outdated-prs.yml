@@ -1,0 +1,40 @@
+name: Update outdated PR branches
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update out-of-date PR branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          gh pr list --repo "$GITHUB_REPOSITORY" --base main --state open \
+            --json number,author,isDraft,mergeStateStatus \
+            --jq '.[] | select(.isDraft|not) | select(.mergeStateStatus == "BEHIND") | "\(.number)\t\(.author.login)"' \
+          | while IFS=$'\t' read -r number author; do
+              echo "Updating PR #$number ($author)..."
+              case "$author" in
+                dependabot[bot]|app/dependabot)
+                  # Dependabot rebase retriggers checks; GITHUB_TOKEN branch updates do not.
+                  gh pr comment "$number" --repo "$GITHUB_REPOSITORY" --body "@dependabot rebase"
+                  ;;
+                *)
+                  gh pr update-branch "$number" --repo "$GITHUB_REPOSITORY" || {
+                    echo "Skipped PR #$number (update failed — likely conflicts)"
+                  }
+                  ;;
+              esac
+            done
