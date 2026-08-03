@@ -14,7 +14,8 @@ use std::str::FromStr;
 use std::sync::{Arc, mpsc};
 use std::thread;
 
-use rubato::{FastFixedIn, PolynomialDegree, Resampler};
+use rubato::audioadapter_buffers::direct::InterleavedSlice;
+use rubato::{Async, FixedAsync, PolynomialDegree, Resampler};
 
 mod multilingual;
 
@@ -585,12 +586,13 @@ fn process_pcm_stream(
     let mut buffered_pcm = Vec::new();
     let mut language_token_set = false;
     let mut chunk_id = 0usize;
-    let mut resampler = FastFixedIn::new(
+    let mut resampler = Async::<f32>::new_poly(
         16000.0 / in_sample_rate as f64,
         10.,
         PolynomialDegree::Septic,
         1024,
         1,
+        FixedAsync::Input,
     )?;
 
     while let Ok(pcm) = rx.recv() {
@@ -604,8 +606,20 @@ fn process_pcm_stream(
         let remainder = buffered_pcm.len() % 1024;
         for chunk in 0..full_chunks {
             let slice = &buffered_pcm[chunk * 1024..(chunk + 1) * 1024];
-            match resampler.process(&[slice], None) {
-                Ok(samples) => resampled_pcm.extend_from_slice(&samples[0]),
+            let input = match InterleavedSlice::new(slice, 1, slice.len()) {
+                Ok(adapter) => adapter,
+                Err(err) => {
+                    send_error(
+                        &event_sender,
+                        chunk_id,
+                        format!("resampler input adapter error: {err}"),
+                    );
+                    resampled_pcm.clear();
+                    break;
+                }
+            };
+            match resampler.process(&input, None) {
+                Ok(samples) => resampled_pcm.extend_from_slice(&samples.take_data()),
                 Err(err) => {
                     send_error(&event_sender, chunk_id, format!("resampler error: {err}"));
                     resampled_pcm.clear();
