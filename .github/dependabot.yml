@@ -10,8 +10,6 @@ updates:
     open-pull-requests-limit: 10
     assignees:
       - "geoffsee"
-    labels:
-      - "dependencies"
     groups:
       cargo-minor-and-patch:
         patterns:
@@ -38,8 +36,6 @@ updates:
     open-pull-requests-limit: 5
     assignees:
       - "geoffsee"
-    labels:
-      - "dependencies"
     groups:
       github-actions:
         patterns:
