@@ -1,6 +1,6 @@
 [package]
 name = "vtt-rs"
-version = "0.1.16"
+version = "0.1.17"
 edition = "2024"
 license = "MIT"
 authors = ["Geoff Seemueller"]
